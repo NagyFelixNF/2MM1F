@@ -6,11 +6,13 @@ import 'package:intl/intl.dart';
 import 'package:kalender/kalender.dart';
 import 'package:mmf_varian/models/Bookings.dart';
 import 'package:mmf_varian/models/Event.dart';
+import 'package:mmf_varian/utils/StatProvider.dart';
 import 'package:mmf_varian/widget/calendar.dart';
 import 'package:mmf_varian/widget/layout.dart';
 import 'package:mmf_varian/widget/tile.dart';
 
 import 'package:kalender/src/extensions.dart';
+import 'package:provider/provider.dart';
 
 void main() {
   runApp(const MyApp());
@@ -20,20 +22,24 @@ class MyApp extends StatelessWidget {
   const MyApp({super.key});
   @override
   Widget build(BuildContext context) {
-    return MaterialApp(
-      title: 'Kalender Example',
-      theme: ThemeData(
-        useMaterial3: true,
-        colorScheme: ColorScheme.fromSeed(seedColor: Colors.blue),
-      ),
-      darkTheme: ThemeData(
-        useMaterial3: true,
-        colorScheme: ColorScheme.fromSeed(
-          seedColor: Colors.blue,
-          brightness: Brightness.dark,
+    return ChangeNotifierProvider(
+      create: (context) => StatProvider(),
+      child: MaterialApp(
+        debugShowCheckedModeBanner: false,
+        title: 'CareSync Hub',
+        theme: ThemeData(
+          useMaterial3: true,
+          colorScheme: ColorScheme.fromSeed(seedColor: Colors.blue),
         ),
+        darkTheme: ThemeData(
+          useMaterial3: true,
+          colorScheme: ColorScheme.fromSeed(
+            seedColor: Colors.blue,
+            brightness: Brightness.dark,
+          ),
+        ),
+        home: const MyHomePage(),
       ),
-      home: const MyHomePage(),
     );
   }
 }
@@ -48,6 +54,7 @@ class MyHomePage extends StatefulWidget {
 class _MyHomePageState extends State<MyHomePage> {
   final DateFormat formatter = DateFormat('Hm');
   final Bookings bookings = Bookings();
+  String SelectedAcc = "VitalBeam1";
 
   final CalendarController<Event> controller = CalendarController();
   final CalendarEventsController<Event> eventController =
@@ -92,7 +99,8 @@ class _MyHomePageState extends State<MyHomePage> {
                 color: Colors.blue,
                 start: element.start,
                 end: element.finish,
-                patient: element.patient));
+                patient: element.patient,
+                currentTreatmentNumber: element.currentTreatmentNumber));
         eventController.addEvent(calendarEvent);
       }
     }
@@ -188,13 +196,19 @@ class _MyHomePageState extends State<MyHomePage> {
   }
 
   Widget _calendarHeader(DateTimeRange dateTimeRange) {
+    final providerCat = Provider.of<StatProvider>(context, listen: true);
+    providerCat.initGetCoverageForDays(
+        dateTimeRange.start, SelectedAcc, bookings);
     return Row(
       children: [
         DropdownMenu(
             onSelected: (value) {
               if (value == null) return;
               eventController.clearEvents();
+              SelectedAcc = value;
               createEventsForBookings(value);
+              providerCat.getCoverageForDays(
+                  dateTimeRange.start, value, bookings);
             },
             initialSelection: 'VitalBeam1',
             dropdownMenuEntries: const [
@@ -217,13 +231,18 @@ class _MyHomePageState extends State<MyHomePage> {
               .toList(),
         ),
         IconButton.filledTonal(
-          onPressed: controller.animateToPreviousPage,
+          onPressed: () {
+            controller.animateToPreviousPage();
+          },
           icon: const Icon(Icons.navigate_before_rounded),
         ),
         IconButton.filledTonal(
-          onPressed: controller.animateToNextPage,
+          onPressed: () {
+            controller.animateToNextPage();
+          },
           icon: const Icon(Icons.navigate_next_rounded),
         ),
+        Text('${providerCat.Stat}')
       ],
     );
   }
@@ -249,13 +268,17 @@ class _MyHomePageState extends State<MyHomePage> {
       text = visibleDateRange.start.startOfWeek.weekOfYear.toString();
     }
 
-    return IconButton.filledTonal(
-      tooltip: 'Week Number',
-      onPressed: null,
-      visualDensity: VisualDensity.comfortable,
-      icon: Text(
-        text,
-      ),
+    return Column(
+      children: [
+        IconButton.filledTonal(
+          tooltip: 'Week Number',
+          onPressed: null,
+          visualDensity: VisualDensity.comfortable,
+          icon: Text(
+            text,
+          ),
+        ),
+      ],
     );
   }
 }

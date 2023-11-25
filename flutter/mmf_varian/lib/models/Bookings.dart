@@ -11,8 +11,9 @@ class Booking {
   int length = 0;
   final Patient patient;
   final Accel accel;
+  final int currentTreatmentNumber;
 
-  Booking(this.start, this.patient, this.accel) {
+  Booking(this.start, this.patient, this.accel, this.currentTreatmentNumber) {
     length = patient.fractionTime;
     finish = start.add(Duration(minutes: length));
   }
@@ -125,7 +126,9 @@ class Bookings {
         if (isWeekend(start)) {
           print(start);
         }
-        Booking booking = Booking(start, patients[i], accel);
+        patients[i].currentFractionNumber++;
+        Booking booking = Booking(
+            start, patients[i], accel, patients[i].currentFractionNumber);
         bookings.add(booking);
         starting_day = booking.start.add(Duration(days: 1));
         starting_day = moveFromWeekend(starting_day);
@@ -161,7 +164,7 @@ class Bookings {
     DateTime result = DateTime(2023, 11, 27, 8);
 
     if (bookings.length < 1) {
-      bookings.add(Booking(DateTime(2023, 11, 27, 8), patient, accel));
+      bookings.add(Booking(DateTime(2023, 11, 27, 8), patient, accel, 0));
     }
     for (var i = 0; i < bookings.length - 1; i++) {
       var booking = bookings[i];
