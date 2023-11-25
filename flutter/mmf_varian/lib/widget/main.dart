@@ -5,12 +5,7 @@ import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 import 'package:kalender/kalender.dart';
 import 'package:mmf_varian/models/Bookings.dart';
-import 'package:mmf_varian/models/Event.dart';
 import 'package:mmf_varian/widget/calendar.dart';
-import 'package:mmf_varian/widget/layout.dart';
-import 'package:mmf_varian/widget/tile.dart';
-
-import 'package:kalender/src/extensions.dart';
 
 void main() {
   runApp(const MyApp());
@@ -18,6 +13,7 @@ void main() {
 
 class MyApp extends StatelessWidget {
   const MyApp({super.key});
+
   @override
   Widget build(BuildContext context) {
     return MaterialApp(
@@ -46,9 +42,6 @@ class MyHomePage extends StatefulWidget {
 }
 
 class _MyHomePageState extends State<MyHomePage> {
-  final DateFormat formatter = DateFormat('Hm');
-  final Bookings bookings = Bookings();
-
   final CalendarController<Event> controller = CalendarController();
   final CalendarEventsController<Event> eventController =
       CalendarEventsController<Event>();
@@ -56,10 +49,9 @@ class _MyHomePageState extends State<MyHomePage> {
   late ViewConfiguration currentConfiguration = viewConfigurations[0];
   List<ViewConfiguration> viewConfigurations = [
     CustomMultiDayConfiguration(
-        name: 'Day',
-        numberOfDays: 1,
-        verticalSnapRange: const Duration(minutes: 1),
-        verticalStepDuration: const Duration(minutes: 1)),
+      name: 'Day',
+      numberOfDays: 1,
+    ),
     CustomMultiDayConfiguration(
       name: 'Custom',
       numberOfDays: 2,
@@ -76,25 +68,37 @@ class _MyHomePageState extends State<MyHomePage> {
   @override
   void initState() {
     super.initState();
+    Bookings bookings = Bookings();
     bookings.createBookings2();
     print(bookings.bookings);
-    createEventsForBookings('VitalBeam1');
-  }
-
-  void createEventsForBookings(String accName) {
+    final DateFormat formatter = DateFormat('Hm');
+    List<CalendarEvent> calev = <CalendarEvent>[];
     for (var element in bookings.bookings) {
       CalendarEvent<Event> calendarEvent;
-      if (element.accel.name == accName) {
+      if (element.accel.name == "TrueBeam22") {
         calendarEvent = CalendarEvent(
-            dateTimeRange:
-                DateTimeRange(start: element.start, end: element.finish),
-            eventData: Event(
-                color: Colors.blue,
-                start: element.start,
-                end: element.finish,
-                patient: element.patient));
-        eventController.addEvent(calendarEvent);
+          dateTimeRange:
+              DateTimeRange(start: element.start, end: element.finish),
+          eventData: Event(
+              color: Colors.blueAccent,
+              start: element.start,
+              end: element.finish,
+              title:
+                  "${element.patient.name}\t${formatter.format(element.start)}-${formatter.format(element.finish)}: ${element.accel.name}"),
+        );
+      } else {
+        calendarEvent = CalendarEvent(
+          dateTimeRange:
+              DateTimeRange(start: element.start, end: element.finish),
+          eventData: Event(
+              color: Colors.red,
+              start: element.start,
+              end: element.finish,
+              title:
+                  "${element.patient.name}\t${formatter.format(element.start)}-${formatter.format(element.finish)}: ${element.accel.name}"),
+        );
       }
+      eventController.addEvent(calendarEvent);
     }
   }
 
@@ -111,8 +115,7 @@ class _MyHomePageState extends State<MyHomePage> {
           scheduleTileBuilder: _scheduleTileBuilder,
           components: CalendarComponents(
               calendarHeaderBuilder: _calendarHeader,
-              calendarZoomDetector: _calendarZoomDetectorBuil,
-              weekNumberBuilder: _calendarWeekHeader),
+              calendarZoomDetector: _calendarZoomDetectorBuil),
           eventHandlers: CalendarEventHandlers(
             onEventTapped: _onEventTapped,
             onEventChanged: _onEventChanged,
@@ -148,32 +151,46 @@ class _MyHomePageState extends State<MyHomePage> {
     if (isMobile) {
       eventController.deselectEvent();
     }
-    event.eventData!.start = event.start;
-    event.eventData!.end = event.end;
   }
 
   Widget _tileBuilder(
     CalendarEvent<Event> event,
-    TileConfiguration tileConfiguration,
+    TileConfiguration configuration,
   ) {
-    return EventTile(
-      event: event,
-      tileType: tileConfiguration.tileType,
-      drawOutline: tileConfiguration.drawOutline,
-      continuesBefore: tileConfiguration.continuesBefore,
-      continuesAfter: tileConfiguration.continuesAfter,
+    final color = event.eventData?.color ?? Colors.blue;
+    return Card(
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(8),
+      ),
+      margin: EdgeInsets.zero,
+      elevation: configuration.tileType == TileType.ghost ? 0 : 8,
+      color: configuration.tileType != TileType.ghost
+          ? color
+          : color.withAlpha(100),
+      child: Center(
+        child: configuration.tileType != TileType.ghost
+            ? Text(event.eventData?.title ?? 'New Event')
+            : null,
+      ),
     );
   }
 
   Widget _multiDayTileBuilder(
     CalendarEvent<Event> event,
-    MultiDayTileConfiguration tileConfiguration,
+    MultiDayTileConfiguration configuration,
   ) {
-    return MultiDayEventTile(
-      event: event,
-      tileType: tileConfiguration.tileType,
-      continuesBefore: tileConfiguration.continuesBefore,
-      continuesAfter: tileConfiguration.continuesAfter,
+    final color = event.eventData?.color ?? Colors.blue;
+    return Card(
+      margin: const EdgeInsets.symmetric(vertical: 2),
+      elevation: configuration.tileType == TileType.selected ? 8 : 0,
+      color: configuration.tileType == TileType.ghost
+          ? color.withAlpha(100)
+          : color,
+      child: Center(
+        child: configuration.tileType != TileType.ghost
+            ? Text(event.eventData?.title ?? 'New Event')
+            : null,
+      ),
     );
   }
 
@@ -190,20 +207,6 @@ class _MyHomePageState extends State<MyHomePage> {
   Widget _calendarHeader(DateTimeRange dateTimeRange) {
     return Row(
       children: [
-        DropdownMenu(
-            onSelected: (value) {
-              if (value == null) return;
-              eventController.clearEvents();
-              createEventsForBookings(value);
-            },
-            initialSelection: 'VitalBeam1',
-            dropdownMenuEntries: const [
-              DropdownMenuEntry(value: 'VitalBeam1', label: 'VitalBeam1'),
-              DropdownMenuEntry(value: 'VitalBeam2', label: 'VitalBeam2'),
-              DropdownMenuEntry(value: 'TrueBeam1', label: 'TrueBeam1'),
-              DropdownMenuEntry(value: 'TrueBeam2', label: 'TrueBeam2'),
-              DropdownMenuEntry(value: 'Clinac', label: 'Clinac'),
-            ]),
         DropdownMenu(
           onSelected: (value) {
             if (value == null) return;
@@ -239,23 +242,26 @@ class _MyHomePageState extends State<MyHomePage> {
       child: child,
     );
   }
+}
 
-  Widget _calendarWeekHeader(DateTimeRange visibleDateRange) {
-    final String text;
-    if (visibleDateRange.duration > const Duration(days: 7)) {
-      text =
-          '${visibleDateRange.start.weekOfYear} - ${visibleDateRange.end.weekOfYear}';
-    } else {
-      text = visibleDateRange.start.startOfWeek.weekOfYear.toString();
-    }
+class Event {
+  Event({
+    required this.title,
+    this.description,
+    this.color,
+    required this.start,
+    required this.end,
+  });
 
-    return IconButton.filledTonal(
-      tooltip: 'Week Number',
-      onPressed: null,
-      visualDensity: VisualDensity.comfortable,
-      icon: Text(
-        text,
-      ),
-    );
-  }
+  /// The title of the [Event].
+  final String title;
+
+  /// The description of the [Event].
+  final String? description;
+
+  /// The color of the [Event] tile.
+  final Color? color;
+  final DateTime start;
+
+  final DateTime end;
 }

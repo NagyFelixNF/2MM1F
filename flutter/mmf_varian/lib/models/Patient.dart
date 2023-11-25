@@ -6,6 +6,7 @@ class Patient {
   final Region region;
   final int fractionNumber;
   final int fractionTime;
+  int currentFractionNumber = 0;
 
   Patient(
       {required this.name,
